@@ -10,8 +10,8 @@ error FundMe__NotOwner();
 contract FundMe {
     using PriceConverter for uint256;
 
-    mapping(address => uint256) public addressToAmountFunded;
-    address[] public funders;
+    mapping(address => uint256) public sAddressToAmountFunded;
+    address[] public sFunders;
 
     // Could we make this constant?  /* hint: no! We should make it immutable! */
     address public immutable I_OWNER;
@@ -24,10 +24,13 @@ contract FundMe {
     }
 
     function fund() public payable {
-        require(msg.value.getConversionRate(sPriceFeed) >= MINIMUM_USD, "You need to spend more ETH!");
+        require(
+            msg.value.getConversionRate(sPriceFeed) >= MINIMUM_USD,
+            "You need to spend more ETH!"
+        );
         // require(PriceConverter.getConversionRate(msg.value) >= MINIMUM_USD, "You need to spend more ETH!");
-        addressToAmountFunded[msg.sender] += msg.value;
-        funders.push(msg.sender);
+        sAddressToAmountFunded[msg.sender] += msg.value;
+        sFunders.push(msg.sender);
     }
 
     function getVersion() public view returns (uint256) {
@@ -41,11 +44,15 @@ contract FundMe {
     }
 
     function withdraw() public onlyOwner {
-        for (uint256 funderIndex = 0; funderIndex < funders.length; funderIndex++) {
-            address funder = funders[funderIndex];
-            addressToAmountFunded[funder] = 0;
+        for (
+            uint256 funderIndex = 0;
+            funderIndex < sFunders.length;
+            funderIndex++
+        ) {
+            address funder = sFunders[funderIndex];
+            sAddressToAmountFunded[funder] = 0;
         }
-        funders = new address[](0);
+        sFunders = new address[](0);
         // // transfer
         // payable(msg.sender).transfer(address(this).balance);
 
@@ -54,9 +61,12 @@ contract FundMe {
         // require(sendSuccess, "Send failed");
 
         // call
-        (bool callSuccess,) = payable(msg.sender).call{value: address(this).balance}("");
+        (bool callSuccess, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
         require(callSuccess, "Call failed");
     }
+
     // Explainer from: https://solidity-by-example.org/fallback/
     // Ether is sent to contract
     //      is msg.data empty?
@@ -75,6 +85,17 @@ contract FundMe {
 
     receive() external payable {
         fund();
+    }
+
+    // View / Pure functions (Getters)
+    function getAddressToAmountFunded(
+        address fundingAddress
+    ) external view returns (uint256) {
+        return sAddressToAmountFunded[fundingAddress];
+    }
+
+    function getFunder(uint256 index) external view returns (address) {
+        return sFunders[index];
     }
 }
 
