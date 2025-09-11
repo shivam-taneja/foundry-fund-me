@@ -12,6 +12,7 @@ contract FundMeTest is Test {
     address USER = makeAddr("user");
     uint256 constant SEND_VALUE = 0.1 ether;
     uint256 constant STARTING_BALANCE = 10 ether;
+
     // uint256 constant GAS_PRICE = 1;
 
     function setUp() external {
@@ -112,6 +113,36 @@ contract FundMeTest is Test {
 
         vm.startPrank(fundMe.getOwner());
         fundMe.withdraw();
+        vm.stopPrank();
+
+        assertEq(address(fundMe).balance, 0);
+        assertEq(
+            startingFundMeBalance + startinOwnerBalance,
+            fundMe.getOwner().balance
+        );
+    }
+
+    function testWithdrawFromMultipleFundersCheaper() public funded {
+        // using uint160 instead of uint256 cause
+        // uint160 has the same bytes as address
+        uint160 numberOFunders = 10;
+        uint160 startingFunderIndex = 1;
+
+        for (uint160 i = startingFunderIndex; i < numberOFunders; i++) {
+            // vm.prank - make new address
+            // vm.deal - give new address money
+            // vm.hoax - does the above two in 1 step
+            hoax(address(i), SEND_VALUE);
+
+            // fund the fundMe
+            fundMe.fund{value: SEND_VALUE}();
+        }
+
+        uint256 startinOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingFundMeBalance = address(fundMe).balance;
+
+        vm.startPrank(fundMe.getOwner());
+        fundMe.cheaperWithdraw();
         vm.stopPrank();
 
         assertEq(address(fundMe).balance, 0);
